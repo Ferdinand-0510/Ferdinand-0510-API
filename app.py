@@ -34,17 +34,17 @@ CORS(app, supports_credentials=True, resources={
 })
 
 def create_connection():
-    """
-    創建與 Azure SQL Database 的連接
-    """
     try:
-        # 從環境變數獲取連接資訊
-        server = "carlweb-server.database.windows.net"
-        database = "CarlWeb"
-        username = "carl"
-        password = os.getenv('DB_PASSWORD')
+        # 使用環境變數獲取所有連接資訊
+        server = os.getenv('DB_SERVER', 'carlweb-server.database.windows.net')
+        database = os.getenv('DB_DATABASE', 'CarlWeb')
+        username = os.getenv('DB_USERNAME', 'carl')
+        password = os.getenv('DB_PASSWORD','1234')
         
-        # 建立連接
+        # 添加更詳細的錯誤日誌
+        if not password:
+            raise ValueError("Database password is not set in environment variables")
+        
         conn = pymssql.connect(
             server=server, 
             user=username,
@@ -53,15 +53,18 @@ def create_connection():
             port='1433',
             as_dict=True,
             charset='utf8',
-            tds_version='7.4'  # 使用較新的 TDS 版本
+            tds_version='7.4'
         )
         
         print(f"成功連接到資料庫: {database}")
         return conn
         
     except Exception as e:
-        print(f"資料庫連接錯誤: {str(e)}")
-        print(f"連接詳情: server={server}, user={username}, database={database}")
+        print(f"資料庫連接錯誤詳情:")
+        print(f"Server: {server}")
+        print(f"Username: {username}")
+        print(f"Database: {database}")
+        print(f"錯誤信息: {str(e)}")
         raise
 
 def test_connection():
