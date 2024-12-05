@@ -94,6 +94,7 @@ def get_This_Key():
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute("SELECT Uuid FROM WebLoginKey")
+                print("get_This_Key:",cursor)
                 row = cursor.fetchone()
                 if row:
                     return row[0]
