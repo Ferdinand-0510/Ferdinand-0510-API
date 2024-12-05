@@ -50,10 +50,8 @@ def create_connection():
             user=username,
             password=password, 
             database=database,
-            port='1433',
             as_dict=True,
-            charset='utf8',
-            tds_version='7.4'  # 使用較新的 TDS 版本
+            charset='utf8'
         )
         
         print(f"成功連接到資料庫: {database}")
@@ -63,6 +61,11 @@ def create_connection():
         print(f"資料庫連接錯誤: {str(e)}")
         print(f"連接詳情: server={server}, user={username}, database={database}")
         raise
+    except pymssql.InterfaceError as ie:
+        print(f"Interface Error: {ie}")
+    except pymssql.DatabaseError as de:
+        print(f"Database Error: {de}")
+
 
 def test_connection():
     """
@@ -103,7 +106,7 @@ print("This_key:",This_key)
 def get_title():
     try:
         # 從請求中獲取 customer_uuid，如果沒有則使用 This_key
-        customer_uuid = request.args.get('customer_uuid', get_This_Key())
+        customer_uuid = get_This_Key()
         print("get_title:",customer_uuid)
         title = get_title_logic(customer_uuid)
         return jsonify(Title=title), 200
@@ -112,7 +115,7 @@ def get_title():
     
 def get_title_logic(customer_uuid=None):
     try:
-
+        customer_uuid = get_This_Key()
         # 驗證 customer_uuid
         if customer_uuid is None:
             raise ValueError("必須提供 CustomerUuid")
