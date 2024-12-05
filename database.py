@@ -15,7 +15,7 @@ def create_connection():
     """
     server = "carlweb-server.database.windows.net"
     database = "CarlWeb"
-    username = "carl"
+    username = "carluser"
     password = os.getenv('DB_PASSWORD')
 
     try:
