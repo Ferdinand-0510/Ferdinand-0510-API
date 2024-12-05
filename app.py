@@ -43,7 +43,7 @@ def create_connection():
         server = "carlweb-server.database.windows.net"
         database = "CarlWeb"
         username = "carl@carlweb-server"  # 添加伺服器名稱
-        password = "Golen3857."  # 在生產環境中應該使用環境變數
+        password = os.getenv('DB_PASSWORD')  # 在生產環境中應該使用環境變數
         
         # 建立連接
         conn = pymssql.connect(
