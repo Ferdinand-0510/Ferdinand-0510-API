@@ -84,7 +84,23 @@ def test_connection():
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-
+#這個客戶叫做"測試"
+This_customer='測試'
+def get_This_Key(customer_uuid=None):
+    try:
+                # 驗證 customer_uuid
+        if customer_uuid is None:
+            raise ValueError("必須提供 CustomerUuid")
+        with create_connection() as conn_sql_server:
+            with conn_sql_server.cursor() as cursor:
+                cursor.execute("SELECT Uuid FROM WebLoginKey WHERE Name = ?",(This_customer,))
+                row = cursor.fetchone()
+                if row:
+                    return row[0]
+    except Exception as e:
+        return print(str(e))
+This_key = get_This_Key()
+print("This_key:",This_key)
 #--------------------------------------------------------取得首頁標題資料--------------------------------------------------------
 @app.route('/api/get_title', methods=['GET'])
 def get_title():
@@ -167,7 +183,7 @@ def save_HomeData():
         print(f"Error saving home data: {str(e)}")
         return jsonify(error=str(e)), 500
     
-    
+
 #--------------------------------------------------------取得最新資料--------------------------------------------------------
 
 def get_HomeNews_logic(customer_uuid=None):
