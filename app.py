@@ -4,7 +4,7 @@ from flask import Flask, jsonify, session, request, send_from_directory
 from flask_cors import CORS
 
 from dotenv import load_dotenv
-import pymssql
+import pyodbc
 import uuid
 import bcrypt
 from datetime import datetime
@@ -36,35 +36,32 @@ CORS(app, supports_credentials=True, resources={
 def create_connection():
     try:
         # 使用環境變數獲取所有連接資訊
-        server = os.getenv('DB_SERVER', 'carlweb-server.database.windows.net')
+        server = os.getenv('DB_SERVER', 'DESKTOP-IUM8S47')
         database = os.getenv('DB_DATABASE', 'CarlWeb')
         username = os.getenv('DB_USERNAME', 'carl')
-        password = os.getenv('DB_PASSWORD','1234')
-        
-        # 添加更詳細的錯誤日誌
-        if not password:
-            raise ValueError("Database password is not set in environment variables")
-        
-        conn = pymssql.connect(
-            server=server, 
-            user=username,
-            password=password, 
-            database=database,
-            port='1433',
-            as_dict=True,
-            charset='utf8',
-            tds_version='7.4'
+        password = os.getenv('DB_PASSWORD', '1234')
+
+        # 驅動程式名稱確認
+        connection_string = (
+            f"Driver={{ODBC Driver 17 for SQL Server}};"  # 確認驅動名稱正確
+            f"Server={server};"
+            f"Database={database};"
+            f"UID={username};"
+            f"PWD={password};"
+            f"TrustServerCertificate=yes;"
+            f"Encrypt=no;"
         )
-        
+
+        conn = pyodbc.connect(connection_string)
         print(f"成功連接到資料庫: {database}")
         return conn
-        
+
     except Exception as e:
         print(f"資料庫連接錯誤詳情:")
         print(f"Server: {server}")
         print(f"Username: {username}")
         print(f"Database: {database}")
-        print(f"錯誤信息: {str(e)}")
+        print(f"錯誤信息: {e}")
         raise
 
 def test_connection():
