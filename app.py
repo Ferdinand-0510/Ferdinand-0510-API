@@ -90,7 +90,7 @@ def get_This_Key():
     try:
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
-                cursor.execute("SELECT Uuid FROM WebLoginKey WHERE Uuid = '30AE0377-E72C-4D79-BD42-4B6ADA7E6E83'")
+                cursor.execute("SELECT Uuid FROM WebLoginKey")
                 row = cursor.fetchone()
                 if row:
                     return row[0]
