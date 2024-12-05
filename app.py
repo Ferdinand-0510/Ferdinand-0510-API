@@ -94,14 +94,15 @@ def get_This_Key():
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute("SELECT Uuid FROM WebLoginKey")
-                print("get_This_Key:",cursor)
                 row = cursor.fetchone()
-                if row:
-                    return row[0]
+                if row:  # 確保 row 不為 None
+                    print("row['Uuid']:", row['Uuid'])  # 取出字典中的 'Uuid' 值
+                    return row['Uuid']  # 返回 'Uuid' 的值
     except Exception as e:
         return print(str(e))
+
 This_key = get_This_Key()
-print("This_key:",This_key)
+print("This_key:", This_key)
 #--------------------------------------------------------取得首頁標題資料--------------------------------------------------------
 @app.route('/api/get_title', methods=['GET'])
 def get_title():
@@ -124,16 +125,15 @@ def get_title_logic(customer_uuid=None):
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute(
-                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = ?", 
+                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = %s", 
                     (customer_uuid,)
                 )
                 row = cursor.fetchone()
-                return row[0] if row else ""
+                return row['Title'] if row else ""  # 使用字典索引
 
     except Exception as e:
         print(f"Error fetching title: {e}")
         raise
-
 @app.route('/api/save_HomeData', methods=['POST'])
 def save_HomeData():
     try:
