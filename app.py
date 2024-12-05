@@ -86,11 +86,11 @@ def health_check():
 
 #這個客戶叫做"測試"
 This_customer='測試'
-def get_This_Key(customer_uuid=None):
+def get_This_Key():
     try:
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
-                cursor.execute("SELECT Uuid FROM WebLoginKey WHERE Name = ?",(This_customer,))
+                cursor.execute("SELECT Uuid FROM WebLoginKey WHERE Uuid = '30AE0377-E72C-4D79-BD42-4B6ADA7E6E83'")
                 row = cursor.fetchone()
                 if row:
                     return row[0]
