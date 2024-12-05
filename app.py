@@ -88,9 +88,6 @@ def health_check():
 This_customer='測試'
 def get_This_Key(customer_uuid=None):
     try:
-                # 驗證 customer_uuid
-        if customer_uuid is None:
-            raise ValueError("必須提供 CustomerUuid")
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute("SELECT Uuid FROM WebLoginKey WHERE Name = ?",(This_customer,))
@@ -183,7 +180,7 @@ def save_HomeData():
         print(f"Error saving home data: {str(e)}")
         return jsonify(error=str(e)), 500
     
-
+    
 #--------------------------------------------------------取得最新資料--------------------------------------------------------
 
 def get_HomeNews_logic(customer_uuid=None):
