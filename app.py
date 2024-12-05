@@ -85,7 +85,89 @@ def health_check():
     return jsonify({"status": "healthy"}), 200
 
 
+#--------------------------------------------------------取得首頁標題資料--------------------------------------------------------
+@app.route('/api/get_title', methods=['GET'])
+def get_title():
+    try:
+        # 從請求中獲取 customer_uuid，如果沒有則使用 This_key
+        customer_uuid = request.args.get('customer_uuid', This_key)
+        title = get_title_logic(customer_uuid)
+        return jsonify(Title=title), 200
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    
+def get_title_logic(customer_uuid=None):
+    try:
+        # 驗證 customer_uuid
+        if customer_uuid is None:
+            raise ValueError("必須提供 CustomerUuid")
+            
+        with create_connection() as conn_sql_server:
+            with conn_sql_server.cursor() as cursor:
+                cursor.execute(
+                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = ?", 
+                    (customer_uuid,)
+                )
+                row = cursor.fetchone()
+                return row[0] if row else ""
 
+    except Exception as e:
+        print(f"Error fetching title: {e}")
+        raise
+
+@app.route('/api/save_HomeData', methods=['POST'])
+def save_HomeData():
+    try:
+        data = request.get_json()
+        title = data.get("Title")
+        customer_uuid = data.get("CustomerUuid", This_key)  # 從請求中獲取 customer_uuid
+        title_img = data.get("TitleImg", "")
+        title_status = data.get("Title_Status", 1)
+        
+        # 驗證必要參數
+        if not title:
+            return jsonify(error="Title is required"), 400
+        if not customer_uuid:
+            return jsonify(error="CustomerUuid is required"), 400
+
+        with create_connection() as conn_sql_server:
+            with conn_sql_server.cursor() as cursor:
+                # 檢查標題是否存在
+                cursor.execute(
+                    "SELECT Id FROM HomeData WHERE Title = ? AND CustomerUuid = ?", 
+                    (title, customer_uuid)
+                )
+                row = cursor.fetchone() 
+                
+                if row:
+                    # 更新現有記錄
+                    cursor.execute("""
+                        UPDATE HomeData
+                        SET Title = ?, UpdatedAt = GETDATE()
+                        WHERE Title = ? AND CustomerUuid = ?
+                    """, (title, title, customer_uuid))
+                else:
+                    # 插入新記錄
+                    cursor.execute("""
+                        INSERT INTO HomeData (
+                            Uuid, CustomerUuid, Title, TitleImg, 
+                            Title_Status, CreatedAt, UpdatedAt
+                        )
+                        VALUES (
+                            NEWID(), ?, ?, ?, ?, 
+                            GETDATE(), GETDATE()
+                        )
+                    """, (customer_uuid, title, title_img, title_status))
+                    
+                conn_sql_server.commit()
+                
+        return jsonify(message="Success"), 200
+
+    except Exception as e:
+        print(f"Error saving home data: {str(e)}")
+        return jsonify(error=str(e)), 500
+    
+    
 #--------------------------------------------------------取得最新資料--------------------------------------------------------
 
 def get_HomeNews_logic(customer_uuid=None):
