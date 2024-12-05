@@ -33,16 +33,15 @@ CORS(app, supports_credentials=True, resources={
     }
 })
 
-
 def create_connection():
     """
-    創建與 Azure SQL Database 的連接
+    創建與 SQL Server 的連接
     """
     try:
         # 從環境變數獲取連接資訊
-        server = "carlweb-server.database.windows.net"
-        database = "CarlWeb"
-        username = "carl"
+        server = os.getenv('DB_SERVER')
+        database = os.getenv('DB_DATABASE')
+        username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
         
         # 建立連接
@@ -65,7 +64,6 @@ def create_connection():
         print(f"連接詳情: server={server}, user={username}, database={database}")
         raise
 
-
 def test_connection():
     """
     測試資料庫連接是否成功
@@ -86,37 +84,19 @@ def test_connection():
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
-This_customer='測試'
-def get_This_Key():
-    try:
-        with create_connection() as conn_sql_server:
-            with conn_sql_server.cursor() as cursor:
-                cursor.execute("SELECT Uuid FROM WebLoginKey WHERE Name = ?",(This_customer,))
-                row = cursor.fetchone()
-                if row:
-                    return row[0]
-    except Exception as e:
-        return print(str(e))
-This_key = get_This_Key()
-print("This_key:",This_key)
-
 
 
 #--------------------------------------------------------取得最新資料--------------------------------------------------------
-@app.route('/api/get_HomeNews', methods=['GET'])
-def get_HomeNews():
-    try:
-        news = get_HomeNews_logic()
-        return jsonify({"news": news}), 200  # 包裝在 news 鍵中
-    except Exception as e:
-        print(f"獲取新聞錯誤: {str(e)}")
-        return jsonify({"error": str(e)}), 500
 
-def get_HomeNews_logic():
+def get_HomeNews_logic(customer_uuid=None):
     try:
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
-                cursor.execute("SELECT * FROM News WHERE Customer_Uuid = ? AND Deleted_At IS NULL ORDER BY Created_At DESC", (This_key,))
+                # 如果没有提供 customer_uuid，可以使用默认值或抛出异常
+                if customer_uuid is None:
+                    raise ValueError("必須提供 Customer_Uuid")
+                
+                cursor.execute("SELECT * FROM News WHERE Customer_Uuid = ? AND Deleted_At IS NULL ORDER BY Created_At DESC", (customer_uuid,))
                 columns = [column[0] for column in cursor.description]
                 rows = cursor.fetchall()
                 
@@ -150,9 +130,23 @@ def get_HomeNews_logic():
     except Exception as e:
         print(f"獲取新聞邏輯錯誤: {str(e)}")
         raise
-with app.app_context():
-    Now_HomeNews = get_HomeNews_logic()
 
+# 修改 get_HomeNews 路由
+@app.route('/api/get_HomeNews', methods=['GET'])
+def get_HomeNews():
+    try:
+        # 從查詢參數中獲取 Customer_Uuid
+        customer_uuid = request.args.get('customer_uuid')
+        if not customer_uuid:
+            return jsonify({"error": "缺少 Customer_Uuid"}), 400
+        
+        news = get_HomeNews_logic(customer_uuid)
+        return jsonify({"news": news}), 200
+    except Exception as e:
+        print(f"獲取新聞錯誤: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# 同樣修改 add_news 函數
 @app.route('/api/add_news', methods=['POST'])
 def add_news():
     try:
@@ -160,10 +154,10 @@ def add_news():
         print("接收到的新聞數據:", data)  # 調試用
         
         # 驗證必要欄位
-        if not data.get('title') or not data.get('content'):
+        if not data.get('title') or not data.get('content') or not data.get('customer_uuid'):
             return jsonify({
                 'success': False,
-                'message': '標題和內容為必填項目'
+                'message': '標題、內容和 Customer_Uuid 為必填項目'
             }), 400
 
         # 處理發布日期
@@ -193,7 +187,7 @@ def add_news():
                 ) VALUES (?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
             """, (
                 news_uuid,
-                This_key,
+                data['customer_uuid'],  # 使用從請求中獲取的 customer_uuid
                 data['title'],
                 data['content'],
                 publish_date,
@@ -211,6 +205,7 @@ def add_news():
             'success': False,
             'message': f'新增失敗: {str(e)}'
         }), 500
+    
 
 @app.route('/api/update_news/<int:id>', methods=['PUT'])
 def update_news(id):
@@ -308,15 +303,7 @@ def delete_news(id):
         }), 500
 #--------------------------------------------------------取得最新資料--------------------------------------------------------
 
-
-#--------------------------------------------------------取得XX資料--------------------------------------------------------
-#--------------------------------------------------------取得XX資料--------------------------------------------------------
-#--------------------------------------------------------取得XX資料--------------------------------------------------------
-#--------------------------------------------------------取得XX資料--------------------------------------------------------
-
-
 # 確保這個在文件的最後
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
-
