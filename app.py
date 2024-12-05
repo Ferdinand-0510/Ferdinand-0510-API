@@ -33,42 +33,36 @@ CORS(app, supports_credentials=True, resources={
     }
 })
 
-import os
-import pyodbc
 
 def create_connection():
+    """
+    創建與 Azure SQL Database 的連接
+    """
     try:
-        # 使用環境變數獲取所有連接資訊
-        server = os.getenv('DB_SERVER', 'DESKTOP-IUM8S47')
-        database = os.getenv('DB_DATABASE', 'CarlWeb')
-        username = os.getenv('DB_USERNAME', 'carl')
-        password = os.getenv('DB_PASSWORD', '1234')
-
-        # 驅動程式名稱確認
-        connection_string = (
-            f"Driver={{ODBC Driver 17 for SQL Server}};"  # 確認驅動名稱正確
-            f"Server={server};"
-            f"Database={database};"
-            f"UID={username};"
-            f"PWD={password};"
-            f"TrustServerCertificate=yes;"
-            f"Encrypt=no;"
+        # Azure SQL Database 連接參數
+        server = "carlweb-server.database.windows.net"
+        database = "CarlWeb"
+        username = "carl@carlweb-server"  # 添加伺服器名稱
+        password = "Golen3857."  # 在生產環境中應該使用環境變數
+        
+        # 建立連接
+        conn = pymssql.connect(
+            server=server, 
+            user=username,
+            password=password, 
+            database=database,
+            as_dict=True,
+            charset='utf8',
+            port='1433'  # 指定端口
         )
-
-        conn = pyodbc.connect(connection_string)
-        print(f"成功連接到資料庫: {database}")
+        
+        print(f"成功連接到 Azure 資料庫: {database}")
         return conn
-
+        
     except Exception as e:
-        print(f"資料庫連接錯誤詳情:")
-        print(f"Server: {server}")
-        print(f"Username: {username}")
-        print(f"Database: {database}")
-        print(f"錯誤信息: {e}")
+        print(f"資料庫連接錯誤: {str(e)}")
+        print(f"連接詳情: server={server}, user={username}, database={database}")
         raise
-
-
-
 def test_connection():
     """
     測試資料庫連接是否成功
