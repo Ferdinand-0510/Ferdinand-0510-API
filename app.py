@@ -4,7 +4,7 @@ from flask import Flask, jsonify, session, request, send_from_directory
 from flask_cors import CORS
 
 from dotenv import load_dotenv
-import pyodbc
+import pymssql
 import uuid
 import bcrypt
 from datetime import datetime
@@ -32,6 +32,9 @@ CORS(app, supports_credentials=True, resources={
         "supports_credentials": True
     }
 })
+
+import os
+import pyodbc
 
 def create_connection():
     try:
@@ -63,6 +66,8 @@ def create_connection():
         print(f"Database: {database}")
         print(f"錯誤信息: {e}")
         raise
+
+
 
 def test_connection():
     """
