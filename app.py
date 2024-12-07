@@ -107,9 +107,12 @@ print("This_key:", This_key)
 @app.route('/api/get_title', methods=['GET'])
 def get_title():
     try:
+        
+
         # 從請求中獲取 customer_uuid，如果沒有則使用 This_key
         customer_uuid = get_This_Key()
-        print("get_title:",customer_uuid)
+
+        print("customer_uuid:",customer_uuid)
         title = get_title_logic(customer_uuid)
         return jsonify(Title=title), 200
     except Exception as e:
