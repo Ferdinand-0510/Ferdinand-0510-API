@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify, session, request, send_from_directory
 from flask_cors import CORS
-
+import pyodbc
 from dotenv import load_dotenv
 import pymssql
 import uuid
@@ -38,22 +38,22 @@ def create_connection():
     創建與 SQL Server 的連接
     """
     try:
-        # 從環境變數獲取連接資訊
         server = os.getenv('DB_SERVER')
         database = os.getenv('DB_DATABASE')
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
-        
-        # 建立連接
-        conn = pymssql.connect(
-            server=server, 
-            user=username,
-            password=password, 
-            database=database,
-            as_dict=True,
-            charset='utf8'
+
+        conn_str = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
+            f"UID={username};"
+            f"PWD={password};"
+            "Encrypt=yes;"
+            "TrustServerCertificate=no;"
         )
-        
+
+        conn = pyodbc.connect(conn_str)
         print(f"成功連接到資料庫: {database}")
         return conn
         
@@ -96,8 +96,8 @@ def get_This_Key():
                 cursor.execute("SELECT Uuid FROM WebLoginKey")
                 row = cursor.fetchone()
                 if row:  # 確保 row 不為 None
-                    print("row['Uuid']:", row['Uuid'])  # 取出字典中的 'Uuid' 值
-                    return row['Uuid']  # 返回 'Uuid' 的值
+                    print("row[0]:", row[0])  # 取出字典中的 'Uuid' 值
+                    return row[0]  # 返回 'Uuid' 的值
     except Exception as e:
         return print(str(e))
 
@@ -128,7 +128,7 @@ def get_title_logic(customer_uuid=None):
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute(
-                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = %s", 
+                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = ?", 
                     (customer_uuid,)
                 )
                 row = cursor.fetchone()
