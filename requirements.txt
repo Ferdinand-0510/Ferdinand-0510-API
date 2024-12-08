@@ -11,9 +11,9 @@ itsdangerous==2.0.1
 Jinja2==3.0.1
 MarkupSafe==2.0.1
 six==1.16.0
-pyodbc==4.0.39
-pymssql==2.2.8
+pyodbc
 pandas
 selenium
 bs4
 requests
+pymssql

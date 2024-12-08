@@ -3,106 +3,11 @@ services:
     name: webtest-api
     env: python
     buildCommand: |
-      set -e
-      
-      # 創建日誌目錄
-      mkdir -p /var/log/app
-      chmod 777 /var/log/app
-      
-      # 更新系統並安裝基本依賴
-      apt-get update
-      apt-get install -y curl gnupg2 wget software-properties-common
-
-      # 安裝 ODBC 依賴
-      apt-get install -y unixodbc unixodbc-dev
-
-      # 添加 Microsoft 倉庫密鑰和源
-      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
-
-      # 更新並安裝 ODBC Driver
-      apt-get update
-      ACCEPT_EULA=Y apt-get install -y msodbcsql18
-      ACCEPT_EULA=Y apt-get install -y mssql-tools18
-      
-      # 查找驅動文件的實際位置
-      find / -name "libmsodbcsql*.so*" 2>/dev/null || true
-      
-      # 創建驅動文件的符號連結
-      for driver in /opt/microsoft/msodbcsql*/lib64/libmsodbcsql-*.so.*; do
-        if [ -f "$driver" ]; then
-          ln -sf "$driver" /usr/lib/libmsodbcsql.so
-          break
-        fi
-      done
-      
-      # 配置 ODBC
-      cat > /etc/odbcinst.ini << EOL
-[ODBC Driver 18 for SQL Server]
-Description=Microsoft ODBC Driver 18 for SQL Server
-Driver=/usr/lib/libmsodbcsql.so
-Threading=1
-UsageCount=1
-
-[FreeTDS]
-Description=FreeTDS Driver
-Driver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
-Setup=/usr/lib/x86_64-linux-gnu/odbc/libtdsS.so
-UsageCount=1
-EOL
-      
-      # 安裝 FreeTDS
-      apt-get install -y freetds-dev freetds-bin tdsodbc
-      
-      # 設置權限
-      chmod 644 /etc/odbcinst.ini
-      chmod 755 /usr/lib/libmsodbcsql.so || true
-      
-      # 驗證安裝
-      echo "=== ODBC 配置信息 ==="
-      odbcinst -j
-      echo "=== ODBC 驅動配置 ==="
-      cat /etc/odbcinst.ini
-      echo "=== 驅動文件位置 ==="
-      ls -l /usr/lib/libmsodbcsql* || true
-      ls -l /opt/microsoft/msodbcsql*/lib64/ || true
-      echo "=== 系統庫路徑 ==="
-      ldconfig -p | grep -i odbc
-      
-      # 升級 pip 並安裝依賴
-      python -m pip install --upgrade pip
+      apt-get update && \
+      apt-get install -y unixodbc-dev && \
+      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+      apt-get update && \
+      ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
       pip install -r requirements.txt
-
-    startCommand: |
-      # 確保日誌目錄存在
-      mkdir -p /var/log/app
-      chmod 777 /var/log/app
-      
-      # 顯示系統信息
-      echo "=== 系統信息 ==="
-      uname -a
-      ldd --version
-      
-      # 顯示 ODBC 配置
-      echo "=== ODBC 配置 ==="
-      odbcinst -j
-      cat /etc/odbcinst.ini
-      
-      # 顯示環境變量
-      echo "=== 環境變量 ==="
-      env | grep -i odbc
-      env | grep -i ld_library
-      
-      # 啟動應用
-      gunicorn app:app --log-file=/var/log/app/gunicorn.log --log-level=debug
-    envVars:
-      - key: PYTHONPATH
-        value: /opt/render/project/src
-      - key: LD_LIBRARY_PATH
-        value: /usr/lib:/usr/local/lib:/opt/microsoft/msodbcsql18/lib64:/usr/local/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu/odbc
-      - key: LOG_DIR
-        value: /var/log/app
-      - key: ODBCSYSINI
-        value: /etc
-      - key: ODBCINI
-        value: /etc/odbc.ini
+    startCommand: gunicorn app:app
