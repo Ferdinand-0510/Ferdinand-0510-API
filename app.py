@@ -124,16 +124,14 @@ print("This_key:", This_key)
 @app.route('/api/get_title', methods=['GET'])
 def get_title():
     try:
-        # 從請求中獲取 customer_uuid，如果沒有則使用 This_key
+        # 獲取 customer_uuid
         customer_uuid = get_This_Key()
+        print("Using customer_uuid:", customer_uuid)
         
         if not customer_uuid:
-            return jsonify({
-                'error': 'Customer UUID not found',
-                'details': 'Unable to retrieve customer UUID'
-            }), 400
-
-        print("customer_uuid:", customer_uuid)
+            # 使用默認值
+            customer_uuid = 'default-customer-uuid'
+            print("Using default customer_uuid")
         
         try:
             title = get_title_logic(customer_uuid)
@@ -154,16 +152,40 @@ def get_title():
 
 def get_title_logic(customer_uuid):
     try:
-        with create_connection() as conn_sql_server:
-            with conn_sql_server.cursor() as cursor:
-                # 修改 SQL 查詢以使用 pymssql 的參數化查詢
+        with create_connection() as conn:
+            cursor = conn.cursor()
+            # 先檢查是否有任何標題
+            cursor.execute(
+                """
+                SELECT TOP 1 Title 
+                FROM HomeData 
+                WHERE CustomerUuid = %s 
+                AND Title_Status = 1 
+                ORDER BY CreatedAt DESC
+                """, 
+                (customer_uuid,)
+            )
+            row = cursor.fetchone()
+            print("Database result:", row)
+            
+            if not row:
+                # 如果沒有找到標題，創建一個默認的
+                default_title = "歡迎使用"
                 cursor.execute(
-                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = %s", 
-                    (customer_uuid,)
+                    """
+                    INSERT INTO HomeData (
+                        Uuid, CustomerUuid, Title, 
+                        Title_Status, CreatedAt, UpdatedAt
+                    ) VALUES (
+                        %s, %s, %s, 1, GETDATE(), GETDATE()
+                    )
+                    """,
+                    (str(uuid.uuid4()), customer_uuid, default_title)
                 )
-                row = cursor.fetchone()
-                print("Database result:", row)  # 調試用
-                return row['Title'] if row else ""
+                conn.commit()
+                return default_title
+                
+            return row['Title']
 
     except Exception as e:
         print(f"Error in get_title_logic: {e}")
