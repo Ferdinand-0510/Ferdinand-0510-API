@@ -33,59 +33,31 @@ CORS(app, supports_credentials=True, resources={
     }
 })
 
-def create_connection():
-    """
-    創建與 SQL Server 的連接
-    """
-    try:
-        server = os.getenv('DB_SERVER')
-        database = os.getenv('DB_DATABASE')
-        username = os.getenv('DB_USERNAME')
-        password = os.getenv('DB_PASSWORD')
-
-        conn_str = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
-            f"UID={username};"
-            f"PWD={password};"
-            "Encrypt=yes;"
-            "TrustServerCertificate=no;"
-        )
-
-        conn = pyodbc.connect(conn_str)
-        print(f"成功連接到資料庫: {database}")
-        return conn
-        
-    except Exception as e:
-        print(f"資料庫連接錯誤: {str(e)}")
-        print(f"連接詳情: server={server}, user={username}, database={database}")
-        raise
-    except pymssql.InterfaceError as ie:
-        print(f"Interface Error: {ie}")
-    except pymssql.DatabaseError as de:
-        print(f"Database Error: {de}")
-
-
 def test_connection():
     """
     測試資料庫連接是否成功
     """
     try:
-        conn = create_connection()
+        conn = create_connection()  # 使用從 database.py 導入的函數
         cursor = conn.cursor()
         cursor.execute('SELECT 1')
         result = cursor.fetchone()
-        print("資料庫連接成功！")
+        logger.info("資料庫連接測試成功！")
         conn.close()
         return True
     except Exception as e:
-        print(f"連接測試失敗: {str(e)}")
+        logger.error(f"連接測試失敗: {str(e)}")
         return False
 
 @app.route('/api/health')
 def health_check():
-    return jsonify({"status": "healthy"}), 200
+    # 添加數據庫連接測試
+    db_status = "connected" if test_connection() else "disconnected"
+    return jsonify({
+        "status": "healthy",
+        "database": db_status,
+        "timestamp": datetime.now().isoformat()
+    }), 200
 
 #這個客戶叫做"測試"
 This_customer='測試'
