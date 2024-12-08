@@ -56,32 +56,40 @@ def create_connection():
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
         
-        print(f"嘗試連接到資料庫...")
-        print(f"伺服器: {server}")
-        print(f"資料庫: {database}")
+        print(f"Attempting to connect to database:")
+        print(f"Server: {server}")
+        print(f"Database: {database}")
+        print(f"Username: {username}")
+        print(f"Password length: {len(password) if password else 0}")
         
-        # 使用 pymssql 連接
+        if not all([server, database, username, password]):
+            missing = []
+            if not server: missing.append("DB_SERVER")
+            if not database: missing.append("DB_DATABASE")
+            if not username: missing.append("DB_USERNAME")
+            if not password: missing.append("DB_PASSWORD")
+            raise ValueError(f"Missing environment variables: {', '.join(missing)}")
+        
         conn = pymssql.connect(
             server=server,
             database=database,
             user=username,
             password=password,
             port=1433,
-            as_dict=True
+            as_dict=True,
+            charset='UTF-8',
+            timeout=30
         )
         
-        print(f"成功連接到資料庫: {database}")
+        print("Database connection successful!")
         return conn
         
-    except Exception as e:
-        print(f"資料庫連接錯誤: {str(e)}")
-        print(f"連接詳情: server={server}, user={username}, database={database}")
+    except pymssql.OperationalError as e:
+        print(f"Database connection failed (OperationalError): {str(e)}")
         raise
-        
-    except pymssql.InterfaceError as ie:
-        print(f"Interface Error: {ie}")
-    except pymssql.DatabaseError as de:
-        print(f"Database Error: {de}")
+    except Exception as e:
+        print(f"Database connection failed (General Error): {str(e)}")
+        raise
 
 
 def test_connection():

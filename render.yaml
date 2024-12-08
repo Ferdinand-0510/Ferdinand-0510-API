@@ -3,27 +3,23 @@ services:
     name: webtest-api
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --log-level debug  # 添加調試日誌
+    startCommand: gunicorn app:app --log-level debug --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DB_SERVER
-        sync: false
+        value: carlweb-server.database.windows.net
       - key: DB_DATABASE
-        sync: false
+        value: CarlWeb
       - key: DB_USERNAME
-        sync: false
+        value: carluser
       - key: DB_PASSWORD
-        sync: false
+        sync: false  # 從 Render 的環境變數中獲取
       - key: SECRET_KEY
         sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: TZ
+        value: Asia/Taipei
     domains:
       - webtest-api.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /
-    headers:
-      - path: /*
-        name: Strict-Transport-Security
-        value: max-age=31536000; includeSubDomains
