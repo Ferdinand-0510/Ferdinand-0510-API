@@ -35,7 +35,13 @@ CORS(app, supports_credentials=True, resources={
         "max_age": 600
     }
 })
-
+# 添加緩存控制
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 # 添加安全相關的配置
 app.config.update(
     SESSION_COOKIE_SECURE=True,          # 只在 HTTPS 下發送 cookie
