@@ -62,11 +62,6 @@ def create_connection():
         print(f"連接詳情: server={server}, user={username}, database={database}")
         raise
         
-    except Exception as e:
-        print(f"資料庫連接錯誤: {str(e)}")
-        print(f"連接詳情: server={server}, user={username}, database={database}")
-        raise
-    
     except pymssql.InterfaceError as ie:
         print(f"Interface Error: {ie}")
     except pymssql.DatabaseError as de:
@@ -102,8 +97,8 @@ def get_This_Key():
                 cursor.execute("SELECT Uuid FROM WebLoginKey")
                 row = cursor.fetchone()
                 if row:  # 確保 row 不為 None
-                    print("row[0]:", row[0])  # 取出字典中的 'Uuid' 值
-                    return row[0]  # 返回 'Uuid' 的值
+                    print("row[0]:", row['Uuid'])  # 取出字典中的 'Uuid' 值
+                    return row['Uuid']  # 返回 'Uuid' 的值
     except Exception as e:
         return print(str(e))
 
