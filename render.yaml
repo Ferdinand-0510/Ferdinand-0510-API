@@ -3,14 +3,26 @@ services:
     name: webtest-api
     env: python
     buildCommand: |
-      apt-get update && \
-      apt-get install -y unixodbc-dev && \
-      apt-get install -y curl gnupg && \
-      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-      apt-get update && \
-      ACCEPT_EULA=Y apt-get install -y msodbcsql17 mssql-tools && \
-      echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile && \
-      echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc && \
+      set -e
+      apt-get update
+      apt-get install -y curl gnupg wget software-properties-common
+      
+      # 安装 ODBC 相关依赖
+      apt-get install -y unixodbc unixodbc-dev libodbc1
+
+      # 添加 Microsoft 仓库
+      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+      
+      # 更新并安装 ODBC 驱动
+      apt-get update
+      ACCEPT_EULA=Y apt-get install -y msodbcsql17
+      
+      # 验证驱动安装
+      odbcinst -q -d
+      ls -l /opt/microsoft/msodbcsql17/lib64/
+
+      # 安装 Python 依赖
+      pip install --upgrade pip
       pip install -r requirements.txt
     startCommand: gunicorn app:app
