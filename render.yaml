@@ -5,33 +5,31 @@ services:
     buildCommand: |
       set -e
       
-      # 更新和安装基础依赖
+      # 更新系統並安裝基本依賴
       apt-get update
-      apt-get install -y curl gnupg wget software-properties-common
+      apt-get install -y curl gnupg2 wget software-properties-common
 
-      # 安装 ODBC 依赖
-      apt-get install -y unixodbc unixodbc-dev libodbc1 odbcinst
+      # 安裝 ODBC 依賴
+      apt-get install -y unixodbc unixodbc-dev
 
-      # 下载并安装 Microsoft ODBC Driver 
+      # 添加 Microsoft 倉庫密鑰和源
       curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
-      
+      curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+      # 更新並安裝 ODBC Driver
       apt-get update
-      ACCEPT_EULA=Y apt-get install -y msodbcsql17
-
-      # 配置 ODBC Driver
-      odbcinst -j
-      echo "[ODBC Driver 17 for SQL Server]" >> /etc/odbcinst.ini
-      echo "Description=Microsoft ODBC Driver 17 for SQL Server" >> /etc/odbcinst.ini
-      echo "Driver=/opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.7.so.1.1" >> /etc/odbcinst.ini
+      ACCEPT_EULA=Y apt-get install -y msodbcsql18
+      ACCEPT_EULA=Y apt-get install -y mssql-tools18
       
-      # 验证驱动
-      odbcinst -q -d
-      ls -l /opt/microsoft/msodbcsql17/lib64/
-
-      # 安装 Python 依赖
+      # 配置環境變量
+      echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
+      
+      # 驗證驅動安裝
+      odbcinst -j
+      cat /etc/odbcinst.ini
+      
+      # 安裝 Python 依賴
       pip install --upgrade pip
-      pip install pyodbc
       pip install -r requirements.txt
 
     startCommand: gunicorn app:app
