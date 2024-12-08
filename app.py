@@ -11,12 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from database import create_connection
-import logging
-from dotenv import load_dotenv
 
-# 配置日志
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 load_dotenv()
 
 # 創建 Flask 應用程序實例
@@ -38,31 +33,58 @@ CORS(app, supports_credentials=True, resources={
     }
 })
 
+def create_connection():
+    """
+    創建與 SQL Server 的連接
+    """
+    try:
+        server = os.getenv('DB_SERVER')
+        database = os.getenv('DB_DATABASE')
+        username = os.getenv('DB_USERNAME')
+        password = os.getenv('DB_PASSWORD')
+
+        conn_str = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
+            f"UID={username};"
+            f"PWD={password};"
+            "TrustServerCertificate=no;"
+        )
+
+        conn = pyodbc.connect(conn_str)
+        print(f"成功連接到資料庫: {database}")
+        return conn
+        
+    except Exception as e:
+        print(f"資料庫連接錯誤: {str(e)}")
+        print(f"連接詳情: server={server}, user={username}, database={database}")
+        raise
+    except pymssql.InterfaceError as ie:
+        print(f"Interface Error: {ie}")
+    except pymssql.DatabaseError as de:
+        print(f"Database Error: {de}")
+
+
 def test_connection():
     """
     測試資料庫連接是否成功
     """
     try:
-        conn = create_connection()  # 使用從 database.py 導入的函數
+        conn = create_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT 1')
         result = cursor.fetchone()
-        logger.info("資料庫連接測試成功！")
+        print("資料庫連接成功！")
         conn.close()
         return True
     except Exception as e:
-        logger.error(f"連接測試失敗: {str(e)}")
+        print(f"連接測試失敗: {str(e)}")
         return False
 
 @app.route('/api/health')
 def health_check():
-    # 添加數據庫連接測試
-    db_status = "connected" if test_connection() else "disconnected"
-    return jsonify({
-        "status": "healthy",
-        "database": db_status,
-        "timestamp": datetime.now().isoformat()
-    }), 200
+    return jsonify({"status": "healthy"}), 200
 
 #這個客戶叫做"測試"
 This_customer='測試'
