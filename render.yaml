@@ -3,13 +3,40 @@ services:
     name: webtest-api
     env: python
     buildCommand: |
+      # 安裝基本依賴
       apt-get update && \
-      apt-get install -y unixodbc unixodbc-dev curl gnupg && \
+      apt-get install -y curl gnupg2 unixodbc unixodbc-dev && \
+      
+      # 添加 Microsoft 倉庫
       curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+      curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+      
+      # 安裝 ODBC Driver
       apt-get update && \
-      ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
-      odbcinst -q -d && \
+      ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
+      ACCEPT_EULA=Y apt-get install -y mssql-tools18 && \
+      
+      # 配置 ODBC
+      echo "[ODBC Driver 18 for SQL Server]" >> /etc/odbcinst.ini && \
+      echo "Description=Microsoft ODBC Driver 18 for SQL Server" >> /etc/odbcinst.ini && \
+      echo "Driver=/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.*.so.1.1" >> /etc/odbcinst.ini && \
+      echo "UsageCount=1" >> /etc/odbcinst.ini && \
+      
+      # 安裝 Python 依賴
       pip install -r requirements.txt
-
     startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: DB_SERVER
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: PATH
+        value: /opt/mssql-tools18/bin:${PATH}

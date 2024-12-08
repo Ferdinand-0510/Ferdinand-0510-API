@@ -34,24 +34,30 @@ CORS(app, supports_credentials=True, resources={
 })
 
 def create_connection():
-    """
-    創建與 SQL Server 的連接
-    """
     try:
         server = os.getenv('DB_SERVER')
         database = os.getenv('DB_DATABASE')
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
-
+        
+        # 使用完整的連接字串
         conn_str = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
-            f"UID={username};"
-            f"PWD={password};"
-            "TrustServerCertificate=no;"
+            f"Driver={{ODBC Driver 18 for SQL Server}};"
+            f"Server=tcp:{server},1433;"
+            f"Database={database};"
+            f"Uid={username};"
+            f"Pwd={password};"
+            "Encrypt=yes;"
+            "TrustServerCertificate=yes;"
+            "Connection Timeout=30;"
         )
-
+        
+        # 添加更多的調試信息
+        print(f"嘗試連接到資料庫...")
+        print(f"使用的驅動程序: ODBC Driver 18 for SQL Server")
+        print(f"伺服器: {server}")
+        print(f"資料庫: {database}")
+        
         conn = pyodbc.connect(conn_str)
         print(f"成功連接到資料庫: {database}")
         return conn
@@ -59,7 +65,18 @@ def create_connection():
     except Exception as e:
         print(f"資料庫連接錯誤: {str(e)}")
         print(f"連接詳情: server={server}, user={username}, database={database}")
+        
+        # 添加 ODBC 驅動程序檢查
+        import subprocess
+        try:
+            odbcinst = subprocess.check_output(['odbcinst', '-q', '-d']).decode()
+            print("已安裝的 ODBC 驅動程序:")
+            print(odbcinst)
+        except Exception as e2:
+            print(f"無法檢查 ODBC 驅動程序: {str(e2)}")
+            
         raise
+    
     except pymssql.InterfaceError as ie:
         print(f"Interface Error: {ie}")
     except pymssql.DatabaseError as de:
