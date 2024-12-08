@@ -34,32 +34,27 @@ CORS(app, supports_credentials=True, resources={
 })
 
 def create_connection():
+    """
+    創建與 SQL Server 的連接
+    """
     try:
         server = os.getenv('DB_SERVER')
         database = os.getenv('DB_DATABASE')
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
-        
-        # 使用 pyodbc 連接字串
+
         conn_str = (
-            f"Driver={{ODBC Driver 17 for SQL Server}};"
-            f"Server={server};"
-            f"Database={database};"
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
             f"UID={username};"
             f"PWD={password};"
-            "Encrypt=yes;"
             "TrustServerCertificate=no;"
-            "Connection Timeout=30;"
         )
-        
+
         conn = pyodbc.connect(conn_str)
         print(f"成功連接到資料庫: {database}")
         return conn
-        
-    except Exception as e:
-        print(f"資料庫連接錯誤: {str(e)}")
-        print(f"連接詳情: server={server}, user={username}, database={database}")
-        raise
         
     except Exception as e:
         print(f"資料庫連接錯誤: {str(e)}")
@@ -122,13 +117,8 @@ def get_title():
     except Exception as e:
         return jsonify(error=str(e)), 500
     
-def get_title_logic(customer_uuid=None):
+def get_title_logic(customer_uuid):
     try:
-        customer_uuid = get_This_Key()
-        # 驗證 customer_uuid
-        if customer_uuid is None:
-            raise ValueError("必須提供 CustomerUuid")
-            
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute(
@@ -136,7 +126,7 @@ def get_title_logic(customer_uuid=None):
                     (customer_uuid,)
                 )
                 row = cursor.fetchone()
-                return row['Title'] if row else ""  # 使用字典索引
+                return row[0] if row else ""  # 使用字典索引
 
     except Exception as e:
         print(f"Error fetching title: {e}")
