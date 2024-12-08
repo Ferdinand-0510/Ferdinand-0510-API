@@ -5,6 +5,10 @@ services:
     buildCommand: |
       set -e
       
+      # 創建日誌目錄
+      mkdir -p /var/log/app
+      chmod 777 /var/log/app
+      
       # 更新系統並安裝基本依賴
       apt-get update
       apt-get install -y curl gnupg2 wget software-properties-common
@@ -13,7 +17,7 @@ services:
       apt-get install -y unixodbc unixodbc-dev
 
       # 添加 Microsoft 倉庫密鑰和源
-      curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc
+      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
       curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
       # 更新並安裝 ODBC Driver
@@ -28,19 +32,32 @@ services:
       echo "[ODBC Driver 18 for SQL Server]" > /etc/odbcinst.ini
       echo "Description=Microsoft ODBC Driver 18 for SQL Server" >> /etc/odbcinst.ini
       echo "Driver=/usr/lib/libmsodbcsql-18.so" >> /etc/odbcinst.ini
+      echo "Setup=/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.so" >> /etc/odbcinst.ini
       echo "UsageCount=1" >> /etc/odbcinst.ini
       
-      # 驗證驅動安裝
+      # 設置權限
+      chmod 644 /etc/odbcinst.ini
+      chmod 755 /usr/lib/libmsodbcsql-18.so
+      
+      # 驗證安裝
       odbcinst -j
       cat /etc/odbcinst.ini
+      ls -l /usr/lib/libmsodbcsql*
+      ls -l /opt/microsoft/msodbcsql18/lib64/
       
       # 升級 pip 並安裝依賴
       python -m pip install --upgrade pip
       pip install -r requirements.txt
 
-    startCommand: gunicorn app:app
+    startCommand: |
+      # 確保日誌目錄存在
+      mkdir -p /var/log/app
+      chmod 777 /var/log/app
+      gunicorn app:app --log-file=/var/log/app/gunicorn.log --log-level=debug
     envVars:
       - key: PYTHONPATH
         value: /opt/render/project/src
       - key: LD_LIBRARY_PATH
         value: /usr/lib:/usr/local/lib:/opt/microsoft/msodbcsql18/lib64
+      - key: LOG_DIR
+        value: /var/log/app
