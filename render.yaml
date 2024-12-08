@@ -4,94 +4,23 @@ services:
     env: python
     buildCommand: |
       apt-get update && \
-      apt-get install -y unixodbc-dev && \
+      apt-get install -y curl gnupg2 && \
       curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+      curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
       apt-get update && \
-      ACCEPT_EULA=Y apt-get install -y msodbcsql17 && \
+      ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev && \
       pip install -r requirements.txt
     startCommand: gunicorn app:app
-services:
-  - type: web
-    name: webtest-api
-    env: python
-    buildCommand: |
-      set -e
-      
-      # 創建日誌目錄
-      mkdir -p /var/log/app
-      chmod 777 /var/log/app
-      
-      # 更新系統並安裝基本依賴
-      apt-get update
-      apt-get install -y curl gnupg2 wget software-properties-common
-
-      # 安裝 ODBC 依賴
-      apt-get install -y unixodbc unixodbc-dev
-
-      # 添加 Microsoft 倉庫密鑰和源
-      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-      curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
-
-      # 更新並安裝 ODBC Driver
-      apt-get update
-      ACCEPT_EULA=Y apt-get install -y msodbcsql18
-      ACCEPT_EULA=Y apt-get install -y mssql-tools18
-      
-      # 創建必要的目錄
-      mkdir -p /opt/microsoft/msodbcsql18/lib64/
-      
-      # 查找並複製驅動文件
-      find / -name "libmsodbcsql*.so*" -exec cp {} /opt/microsoft/msodbcsql18/lib64/ \;
-      
-      # 創建符號連結
-      ln -sf /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.*.so.* /usr/lib/libmsodbcsql.so
-      
-      # 配置 ODBC
-      cat > /etc/odbcinst.ini << EOL
-[ODBC Driver 18 for SQL Server]
-Description=Microsoft ODBC Driver 18 for SQL Server
-Driver=/usr/lib/libmsodbcsql.so
-Threading=1
-UsageCount=1
-EOL
-      
-      # 設置權限
-      chmod 644 /etc/odbcinst.ini
-      chmod 755 /usr/lib/libmsodbcsql.so || true
-      
-      # 更新庫緩存
-      ldconfig
-      
-      # 升級 pip 並安裝依賴
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-
-    startCommand: |
-      export LD_LIBRARY_PATH="/usr/lib:/usr/local/lib:/opt/microsoft/msodbcsql18/lib64"
-      export ODBCSYSINI="/etc"
-      export ODBCINI="/etc/odbc.ini"
-      
-      gunicorn app:app
-    
     envVars:
-      - key: PYTHONPATH
-        value: /opt/render/project/src
-      - key: LD_LIBRARY_PATH
-        value: /usr/lib:/usr/local/lib:/opt/microsoft/msodbcsql18/lib64
-      - key: ODBCSYSINI
-        value: /etc
-      - key: ODBCINI
-        value: /etc/odbc.ini
-      
-      # 這些環境變量來自你的 .env 文件
+      - key: PYTHON_VERSION
+        value: 3.9.0
       - key: DB_SERVER
-        value: carlweb-server.database.windows.net
+        sync: false
       - key: DB_DATABASE
-        value: CarlWeb
+        sync: false
       - key: DB_USERNAME
-        value: carluser
+        sync: false
       - key: DB_PASSWORD
-        sync: false  # 表示這個值將在 Render 控制台單獨設置
+        sync: false
       - key: SECRET_KEY
-        sync: false  # 同樣在 Render 控制台設置
+        sync: false

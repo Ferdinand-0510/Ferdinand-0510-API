@@ -34,27 +34,32 @@ CORS(app, supports_credentials=True, resources={
 })
 
 def create_connection():
-    """
-    創建與 SQL Server 的連接
-    """
     try:
         server = os.getenv('DB_SERVER')
         database = os.getenv('DB_DATABASE')
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
-
+        
+        # 使用 pyodbc 連接字串
         conn_str = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
-            f"SERVER={server};"
-            f"DATABASE={database};"
+            f"Driver={{ODBC Driver 17 for SQL Server}};"
+            f"Server={server};"
+            f"Database={database};"
             f"UID={username};"
             f"PWD={password};"
+            "Encrypt=yes;"
             "TrustServerCertificate=no;"
+            "Connection Timeout=30;"
         )
-
+        
         conn = pyodbc.connect(conn_str)
         print(f"成功連接到資料庫: {database}")
         return conn
+        
+    except Exception as e:
+        print(f"資料庫連接錯誤: {str(e)}")
+        print(f"連接詳情: server={server}, user={username}, database={database}")
+        raise
         
     except Exception as e:
         print(f"資料庫連接錯誤: {str(e)}")
