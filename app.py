@@ -23,16 +23,26 @@ app.secret_key = os.getenv('SECRET_KEY', '0877283719e292c601be9bdf87b99a21ca96d3
 CORS(app, supports_credentials=True, resources={
     r"/*": {
         "origins": [
-            "https://ferdinand-0510.github.io",
-            "https://webtest-api.onrender.com",
-            "http://localhost:3000"
+            "https://ferdinand-0510.github.io",  # 生產環境
+            "https://webtest-api.onrender.com",  # Render 域名
+            "http://localhost:3000",             # 本地開發
+            "https://localhost:3000"             # 本地 HTTPS
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type"],
-        "supports_credentials": True
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": True,
+        "max_age": 600
     }
 })
 
+# 添加安全相關的配置
+app.config.update(
+    SESSION_COOKIE_SECURE=True,          # 只在 HTTPS 下發送 cookie
+    SESSION_COOKIE_HTTPONLY=True,        # 防止 JavaScript 訪問 cookie
+    SESSION_COOKIE_SAMESITE='Lax',       # CSRF 保護
+    PREFERRED_URL_SCHEME='https'         # 優先使用 HTTPS
+)
 def create_connection():
     try:
         server = os.getenv('DB_SERVER')
@@ -405,5 +415,9 @@ def delete_news(id):
 
 # 確保這個在文件的最後
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    if os.environ.get('FLASK_ENV') == 'development':
+        # 本地開發使用 HTTP
+        app.run(host='0.0.0.0', port=10000)
+    else:
+        # 生產環境使用 HTTPS
+        app.run(host='0.0.0.0', port=10000, ssl_context='adhoc')

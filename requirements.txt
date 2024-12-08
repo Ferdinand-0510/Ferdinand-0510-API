@@ -17,3 +17,4 @@ selenium
 bs4
 requests
 pymssql
+pyOpenSSL==20.0.1  # 用於 HTTPS 支持
