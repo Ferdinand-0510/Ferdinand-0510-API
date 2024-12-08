@@ -58,6 +58,19 @@ def create_connection():
         print(f"伺服器: {server}")
         print(f"資料庫: {database}")
         
+        # 檢查 ODBC 驅動程序
+        import subprocess
+        try:
+            print("檢查 ODBC 配置:")
+            odbcinst_output = subprocess.check_output(['odbcinst', '-j']).decode()
+            print(odbcinst_output)
+            
+            print("檢查驅動程序文件:")
+            ls_output = subprocess.check_output(['ls', '-l', '/opt/microsoft/msodbcsql18/lib64/']).decode()
+            print(ls_output)
+        except Exception as e:
+            print(f"檢查 ODBC 配置時出錯: {str(e)}")
+        
         conn = pyodbc.connect(conn_str)
         print(f"成功連接到資料庫: {database}")
         return conn
@@ -65,16 +78,6 @@ def create_connection():
     except Exception as e:
         print(f"資料庫連接錯誤: {str(e)}")
         print(f"連接詳情: server={server}, user={username}, database={database}")
-        
-        # 添加 ODBC 驅動程序檢查
-        import subprocess
-        try:
-            odbcinst = subprocess.check_output(['odbcinst', '-q', '-d']).decode()
-            print("已安裝的 ODBC 驅動程序:")
-            print(odbcinst)
-        except Exception as e2:
-            print(f"無法檢查 ODBC 驅動程序: {str(e2)}")
-            
         raise
     
     except pymssql.InterfaceError as ie:

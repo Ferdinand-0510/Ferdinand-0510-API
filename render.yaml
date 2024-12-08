@@ -7,20 +7,26 @@ services:
       apt-get update && \
       apt-get install -y curl gnupg2 unixodbc unixodbc-dev && \
       
-      # 添加 Microsoft 倉庫
-      curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-      curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+      # 添加 Microsoft 倉庫金鑰
+      curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc && \
       
-      # 安裝 ODBC Driver
+      # 添加 Microsoft SQL Server Ubuntu 倉庫
+      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | tee /etc/apt/sources.list.d/mssql-release.list && \
+      
+      # 更新套件列表
       apt-get update && \
+      
+      # 安裝 SQL Server 驅動程序和工具
       ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
       ACCEPT_EULA=Y apt-get install -y mssql-tools18 && \
       
-      # 配置 ODBC
-      echo "[ODBC Driver 18 for SQL Server]" >> /etc/odbcinst.ini && \
-      echo "Description=Microsoft ODBC Driver 18 for SQL Server" >> /etc/odbcinst.ini && \
-      echo "Driver=/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.*.so.1.1" >> /etc/odbcinst.ini && \
-      echo "UsageCount=1" >> /etc/odbcinst.ini && \
+      # 創建符號連結
+      ln -sfn /opt/mssql-tools18/bin/sqlcmd /usr/bin/sqlcmd && \
+      ln -sfn /opt/mssql-tools18/bin/bcp /usr/bin/bcp && \
+      
+      # 確認 ODBC 驅動程序的安裝
+      odbcinst -j && \
+      cat /etc/odbcinst.ini && \
       
       # 安裝 Python 依賴
       pip install -r requirements.txt
@@ -40,3 +46,5 @@ services:
         sync: false
       - key: PATH
         value: /opt/mssql-tools18/bin:${PATH}
+      - key: LD_LIBRARY_PATH
+        value: /opt/microsoft/msodbcsql18/lib64:/opt/microsoft/mssql-tools18/lib64:${LD_LIBRARY_PATH}
