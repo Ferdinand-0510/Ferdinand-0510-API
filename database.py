@@ -69,8 +69,3 @@ def create_connection():
         logger.error(f"數據庫連接錯誤: {str(e)}")
         logger.error(f"連接字符串: {conn_str}")
         raise
-    數據庫: {database}
-    用戶名: {username}
-    """
-    logger.error(error_msg)
-    raise Exception(error_msg)
