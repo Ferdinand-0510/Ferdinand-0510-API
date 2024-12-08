@@ -1,51 +1,44 @@
 import os
-import pymssql
-from dotenv import load_dotenv
+import pyodbc
 import logging
+from dotenv import load_dotenv
 
-# 配置日志
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 def create_connection():
-    """
-    创建与 Azure SQL Database 的连接
-    """
-    server = "carlweb-server.database.windows.net"
-    database = "CarlWeb"
-    username = "carluser"
+    server = os.getenv('DB_SERVER')
+    database = os.getenv('DB_DATABASE')
+    username = os.getenv('DB_USERNAME')
     password = os.getenv('DB_PASSWORD')
 
-    try:
-        # 打印详细的连接信息（不包含密码）
-        logger.info(f"尝试连接到服务器: {server}, 数据库: {database}, 用户: {username}")
+    logger.info(f"連接到 {server}/{database}")
 
-        conn = pymssql.connect(
-            server=server,
-            user=username,
-            password=password,
-            database=database,
-            port='1433',
-            as_dict=True,
-            charset='utf8',
-            tds_version='7.4',
-            encrypt=True
-        )
+    driver_attempts = [
+        "ODBC Driver 18 for SQL Server",
+        "ODBC Driver 17 for SQL Server",
+    ]
 
-        logger.info(f"成功连接到数据库: {database}")
-        return conn
+    for driver in driver_attempts:
+        try:
+            conn_str = (
+                f"DRIVER={{{driver}}};"
+                f"SERVER={server};"
+                f"DATABASE={database};"
+                f"UID={username};"
+                f"PWD={password};"
+                "Encrypt=yes;"
+            )
 
-    except pymssql.Error as e:
-        # 更详细的错误日志
-        logger.error(f"数据库连接错误: {e}")
-        logger.error(f"连接详情: server={server}, user={username}, database={database}")
-        
-        # 根据错误类型给出具体建议
-        if "Login failed" in str(e):
-            logger.error("登录失败，请检查用户名和密码是否正确")
-        elif "connection failed" in str(e):
-            logger.error("无法建立连接，请检查服务器地址和网络设置")
-        
-        raise
+            conn = pyodbc.connect(conn_str)
+            logger.info(f"成功使用 {driver} 連接")
+            return conn
+        except Exception as e:
+            logger.warning(f"使用 {driver} 連接失敗: {e}")
+
+    raise Exception("無法建立資料庫連接")
