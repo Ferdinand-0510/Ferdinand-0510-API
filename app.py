@@ -56,40 +56,32 @@ def create_connection():
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
         
-        print(f"Attempting to connect to database:")
-        print(f"Server: {server}")
-        print(f"Database: {database}")
-        print(f"Username: {username}")
+        print(f"嘗試連接到資料庫...")
+        print(f"伺服器: {server}")
+        print(f"資料庫: {database}")
         
-        # 確保連接字串格式正確
+        # 使用 pymssql 連接
         conn = pymssql.connect(
             server=server,
             database=database,
             user=username,
             password=password,
             port=1433,
-            as_dict=True,
-            charset='UTF-8',
-            # 添加這些參數來處理連接問題
-            appname='RenderWebApp',
-            login_timeout=30,
-            timeout=30,
-            autocommit=True
+            as_dict=True
         )
         
-        # 測試連接
-        cursor = conn.cursor()
-        cursor.execute('SELECT 1')
-        cursor.fetchone()
-        cursor.close()
-        
-        print("Database connection successful!")
+        print(f"成功連接到資料庫: {database}")
         return conn
         
     except Exception as e:
-        print(f"Database connection error: {str(e)}")
+        print(f"資料庫連接錯誤: {str(e)}")
+        print(f"連接詳情: server={server}, user={username}, database={database}")
         raise
-
+        
+    except pymssql.InterfaceError as ie:
+        print(f"Interface Error: {ie}")
+    except pymssql.DatabaseError as de:
+        print(f"Database Error: {de}")
 
 
 def test_connection():
@@ -116,52 +108,15 @@ def health_check():
 This_customer='測試'
 def get_This_Key():
     try:
-        with create_connection() as conn:
-            cursor = conn.cursor(as_dict=True)
-            
-            # 先檢查表是否存在
-            cursor.execute("""
-                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
-                             WHERE TABLE_NAME = 'WebLoginKey')
-                BEGIN
-                    CREATE TABLE WebLoginKey (
-                        Id INT IDENTITY(1,1) PRIMARY KEY,
-                        Uuid NVARCHAR(50) NOT NULL,
-                        Customer NVARCHAR(50) NOT NULL,
-                        CreatedAt DATETIME DEFAULT GETDATE()
-                    )
-                END
-            """)
-            conn.commit()
-            
-            # 查詢現有記錄
-            cursor.execute(
-                "SELECT TOP 1 Uuid FROM WebLoginKey WHERE Customer = %s",
-                (This_customer,)
-            )
-            row = cursor.fetchone()
-            
-            if row:
-                uuid_value = row['Uuid']
-                print(f"Found existing UUID: {uuid_value}")
-                return uuid_value
-            
-            # 如果沒有找到，創建新記錄
-            new_uuid = str(uuid.uuid4())
-            cursor.execute(
-                "INSERT INTO WebLoginKey (Uuid, Customer) VALUES (%s, %s)",
-                (new_uuid, This_customer)
-            )
-            conn.commit()
-            print(f"Created new UUID: {new_uuid}")
-            return new_uuid
-            
+        with create_connection() as conn_sql_server:
+            with conn_sql_server.cursor() as cursor:
+                cursor.execute("SELECT Uuid FROM WebLoginKey")
+                row = cursor.fetchone()
+                if row:  # 確保 row 不為 None
+                    print("row[0]:", row['Uuid'])  # 取出字典中的 'Uuid' 值
+                    return row['Uuid']  # 返回 'Uuid' 的值
     except Exception as e:
-        print(f"Error in get_This_Key: {str(e)}")
-        # 返回一個默認值
-        default_uuid = 'default-customer-uuid'
-        print(f"Using default UUID: {default_uuid}")
-        return default_uuid
+        return print(str(e))
 
 This_key = get_This_Key()
 print("This_key:", This_key)
@@ -198,27 +153,8 @@ def get_title():
 def get_title_logic(customer_uuid):
     try:
         with create_connection() as conn:
-            cursor = conn.cursor(as_dict=True)
-            
-            # 先檢查表是否存在
-            cursor.execute("""
-                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
-                             WHERE TABLE_NAME = 'HomeData')
-                BEGIN
-                    CREATE TABLE HomeData (
-                        Id INT IDENTITY(1,1) PRIMARY KEY,
-                        Uuid NVARCHAR(50) NOT NULL,
-                        CustomerUuid NVARCHAR(50) NOT NULL,
-                        Title NVARCHAR(200),
-                        Title_Status BIT DEFAULT 1,
-                        CreatedAt DATETIME DEFAULT GETDATE(),
-                        UpdatedAt DATETIME DEFAULT GETDATE()
-                    )
-                END
-            """)
-            conn.commit()
-            
-            # 查詢標題
+            cursor = conn.cursor()
+            # 先檢查是否有任何標題
             cursor.execute(
                 """
                 SELECT TOP 1 Title 
@@ -230,25 +166,29 @@ def get_title_logic(customer_uuid):
                 (customer_uuid,)
             )
             row = cursor.fetchone()
+            print("Database result:", row)
             
             if not row:
+                # 如果沒有找到標題，創建一個默認的
                 default_title = "歡迎使用"
-                new_uuid = str(uuid.uuid4())
                 cursor.execute(
                     """
                     INSERT INTO HomeData (
-                        Uuid, CustomerUuid, Title, Title_Status
-                    ) VALUES (%s, %s, %s, 1)
+                        Uuid, CustomerUuid, Title, 
+                        Title_Status, CreatedAt, UpdatedAt
+                    ) VALUES (
+                        %s, %s, %s, 1, GETDATE(), GETDATE()
+                    )
                     """,
-                    (new_uuid, customer_uuid, default_title)
+                    (str(uuid.uuid4()), customer_uuid, default_title)
                 )
                 conn.commit()
                 return default_title
-            
+                
             return row['Title']
-            
+
     except Exception as e:
-        print(f"Error in get_title_logic: {str(e)}")
+        print(f"Error in get_title_logic: {e}")
         raise
 @app.route('/api/save_HomeData', methods=['POST'])
 def save_HomeData():
