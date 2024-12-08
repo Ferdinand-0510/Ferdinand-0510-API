@@ -21,52 +21,54 @@ def get_odbc_drivers():
 
 def create_connection():
     """創建與 Azure SQL Database 的連接"""
-    server = "carlweb-server.database.windows.net"
-    database = "CarlWeb"
-    username = "carluser"
-    password = os.getenv('DB_PASSWORD')
+    try:
+        # 檢查環境變量
+        logger.info(f"檢查環境變量: LD_LIBRARY_PATH={os.getenv('LD_LIBRARY_PATH')}")
+        
+        # 檢查驅動文件
+        driver_path = "/usr/lib/libmsodbcsql-18.so"
+        if os.path.exists(driver_path):
+            logger.info(f"驅動文件存在: {driver_path}")
+        else:
+            logger.error(f"驅動文件不存在: {driver_path}")
 
-    # 獲取可用的驅動程序
-    drivers = pyodbc.drivers()
-    logger.info(f"可用的 ODBC 驅動: {drivers}")
-
-    # 嘗試不同的驅動程序
-    driver_attempts = [
-        "ODBC Driver 18 for SQL Server",  # 首選 18 版本
-        "ODBC Driver 17 for SQL Server",
-        "msodbcsql18",
-        "msodbcsql17"
-    ]
-
-    last_error = None
-    for driver in driver_attempts:
+        # 檢查 ODBC 配置
         try:
-            conn_str = (
-                f'DRIVER={{{driver}}};'
-                f'SERVER={server};'
-                f'DATABASE={database};'
-                f'UID={username};'
-                f'PWD={password};'
-                'Encrypt=yes;'
-                'TrustServerCertificate=yes;'  # 添加此行以處理 SSL 問題
-            )
-
-            logger.info(f"嘗試使用驅動: {driver}")
-            conn = pyodbc.connect(conn_str)
-            logger.info(f"成功使用 {driver} 連接到數據庫")
-            return conn
-
+            with open('/etc/odbcinst.ini', 'r') as f:
+                logger.info("ODBC 配置內容:")
+                logger.info(f.read())
         except Exception as e:
-            last_error = e
-            logger.warning(f"使用 {driver} 連接失敗: {str(e)}")
-            continue
+            logger.error(f"無法讀取 ODBC 配置: {e}")
 
-    # 如果所有嘗試都失敗
-    error_msg = f"""
-    數據庫連接失敗:
-    最後錯誤: {str(last_error)}
-    可用驅動: {drivers}
-    服務器: {server}
+        server = "carlweb-server.database.windows.net"
+        database = "CarlWeb"
+        username = "carluser"
+        password = os.getenv('DB_PASSWORD')
+
+        # 獲取可用的驅動程序
+        drivers = pyodbc.drivers()
+        logger.info(f"可用的 ODBC 驅動: {drivers}")
+
+        # 嘗試連接
+        conn_str = (
+            f'DRIVER={{ODBC Driver 18 for SQL Server}};'
+            f'SERVER={server};'
+            f'DATABASE={database};'
+            f'UID={username};'
+            f'PWD={password};'
+            'Encrypt=yes;'
+            'TrustServerCertificate=yes;'
+        )
+
+        logger.info("嘗試建立連接...")
+        conn = pyodbc.connect(conn_str)
+        logger.info("數據庫連接成功！")
+        return conn
+
+    except Exception as e:
+        logger.error(f"數據庫連接錯誤: {str(e)}")
+        logger.error(f"連接字符串: {conn_str}")
+        raise
     數據庫: {database}
     用戶名: {username}
     """
