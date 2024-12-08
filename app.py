@@ -124,11 +124,11 @@ def get_title_logic(customer_uuid):
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
                 cursor.execute(
-                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = ?", 
+                    "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = %s", 
                     (customer_uuid,)
                 )
                 row = cursor.fetchone()
-                return row[0] if row else ""  # 使用字典索引
+                return row['Title'] if row else ""  # 使用字典索引
 
     except Exception as e:
         print(f"Error fetching title: {e}")
@@ -152,7 +152,7 @@ def save_HomeData():
             with conn_sql_server.cursor() as cursor:
                 # 檢查標題是否存在
                 cursor.execute(
-                    "SELECT Id FROM HomeData WHERE Title = ? AND CustomerUuid = ?", 
+                    "SELECT Id FROM HomeData WHERE Title =  %s AND CustomerUuid =  %s", 
                     (title, customer_uuid)
                 )
                 row = cursor.fetchone() 
@@ -161,8 +161,8 @@ def save_HomeData():
                     # 更新現有記錄
                     cursor.execute("""
                         UPDATE HomeData
-                        SET Title = ?, UpdatedAt = GETDATE()
-                        WHERE Title = ? AND CustomerUuid = ?
+                        SET Title =  %s, UpdatedAt = GETDATE()
+                        WHERE Title =  %s AND CustomerUuid =  %s
                     """, (title, title, customer_uuid))
                 else:
                     # 插入新記錄
@@ -172,7 +172,7 @@ def save_HomeData():
                             Title_Status, CreatedAt, UpdatedAt
                         )
                         VALUES (
-                            NEWID(), ?, ?, ?, ?, 
+                            NEWID(),  %s,  %s,  %s,  %s, 
                             GETDATE(), GETDATE()
                         )
                     """, (customer_uuid, title, title_img, title_status))
@@ -196,7 +196,7 @@ def get_HomeNews_logic(customer_uuid=None):
                 if customer_uuid is None:
                     raise ValueError("必須提供 Customer_Uuid")
                 
-                cursor.execute("SELECT * FROM News WHERE Customer_Uuid = ? AND Deleted_At IS NULL ORDER BY Created_At DESC", (customer_uuid,))
+                cursor.execute("SELECT * FROM News WHERE Customer_Uuid =  %s AND Deleted_At IS NULL ORDER BY Created_At DESC", (customer_uuid,))
                 columns = [column[0] for column in cursor.description]
                 rows = cursor.fetchall()
                 
@@ -284,7 +284,7 @@ def add_news():
                     Status,
                     Created_At,
                     Updated_At
-                ) VALUES (?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+                ) VALUES ( %s,  %s,  %s,  %s,  %s,  %s, GETDATE(), GETDATE())
             """, (
                 news_uuid,
                 data['customer_uuid'],  # 使用從請求中獲取的 customer_uuid
@@ -328,12 +328,12 @@ def update_news(id):
             # SQL 查詢使用參數化查詢
             sql = """
                 UPDATE News 
-                SET Title = ?,
-                    Content = ?,
-                    Publish_Date = ?,
-                    Status = ?,
+                SET Title =  %s,
+                    Content =  %s,
+                    Publish_Date =  %s,
+                    Status =  %s,
                     Updated_At = GETDATE()
-                WHERE Id = ?
+                WHERE Id =  %s
             """
             
             params = (
@@ -369,7 +369,7 @@ def delete_news(id):
             cursor = conn.cursor()
             
             # 先檢查新聞是否存在
-            cursor.execute("SELECT Id FROM News WHERE Id = ? AND Deleted_At IS NULL", (id,))
+            cursor.execute("SELECT Id FROM News WHERE Id =  %s AND Deleted_At IS NULL", (id,))
             if not cursor.fetchone():
                 return jsonify({
                     'success': False,
@@ -381,7 +381,7 @@ def delete_news(id):
                 UPDATE News 
                 SET Deleted_At = GETDATE(),
                     Status = 0
-                WHERE Id = ? AND Deleted_At IS NULL
+                WHERE Id =  %s AND Deleted_At IS NULL
             """, (id,))
             
             # 確認更新成功
