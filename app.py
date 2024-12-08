@@ -126,28 +126,47 @@ def get_title():
     try:
         # 從請求中獲取 customer_uuid，如果沒有則使用 This_key
         customer_uuid = get_This_Key()
+        
+        if not customer_uuid:
+            return jsonify({
+                'error': 'Customer UUID not found',
+                'details': 'Unable to retrieve customer UUID'
+            }), 400
 
-        print("customer_uuid:",customer_uuid)
-        title = get_title_logic(customer_uuid)
-
-        return jsonify(Title=title), 200
+        print("customer_uuid:", customer_uuid)
+        
+        try:
+            title = get_title_logic(customer_uuid)
+            return jsonify(Title=title), 200
+        except Exception as e:
+            print(f"get_title_logic error: {str(e)}")
+            return jsonify({
+                'error': 'Database error',
+                'details': str(e)
+            }), 500
+            
     except Exception as e:
-        return jsonify(error=str(e)), 500
-    
+        print(f"get_title error: {str(e)}")
+        return jsonify({
+            'error': 'Server error',
+            'details': str(e)
+        }), 500
+
 def get_title_logic(customer_uuid):
     try:
         with create_connection() as conn_sql_server:
             with conn_sql_server.cursor() as cursor:
+                # 修改 SQL 查詢以使用 pymssql 的參數化查詢
                 cursor.execute(
                     "SELECT Title FROM HomeData WHERE Title_Status = 1 AND CustomerUuid = %s", 
                     (customer_uuid,)
                 )
                 row = cursor.fetchone()
-                print("get_title_:",row['Title'])
-                return row['Title'] if row else ""  # 使用字典索引
+                print("Database result:", row)  # 調試用
+                return row['Title'] if row else ""
 
     except Exception as e:
-        print(f"Error fetching title: {e}")
+        print(f"Error in get_title_logic: {e}")
         raise
 @app.route('/api/save_HomeData', methods=['POST'])
 def save_HomeData():
