@@ -40,40 +40,27 @@ def create_connection():
         username = os.getenv('DB_USERNAME')
         password = os.getenv('DB_PASSWORD')
         
-        # 使用完整的連接字串
-        conn_str = (
-            f"Driver={{ODBC Driver 18 for SQL Server}};"
-            f"Server=tcp:{server},1433;"
-            f"Database={database};"
-            f"Uid={username};"
-            f"Pwd={password};"
-            "Encrypt=yes;"
-            "TrustServerCertificate=yes;"
-            "Connection Timeout=30;"
-        )
-        
-        # 添加更多的調試信息
         print(f"嘗試連接到資料庫...")
-        print(f"使用的驅動程序: ODBC Driver 18 for SQL Server")
         print(f"伺服器: {server}")
         print(f"資料庫: {database}")
         
-        # 檢查 ODBC 驅動程序
-        import subprocess
-        try:
-            print("檢查 ODBC 配置:")
-            odbcinst_output = subprocess.check_output(['odbcinst', '-j']).decode()
-            print(odbcinst_output)
-            
-            print("檢查驅動程序文件:")
-            ls_output = subprocess.check_output(['ls', '-l', '/opt/microsoft/msodbcsql18/lib64/']).decode()
-            print(ls_output)
-        except Exception as e:
-            print(f"檢查 ODBC 配置時出錯: {str(e)}")
+        # 使用 pymssql 連接
+        conn = pymssql.connect(
+            server=server,
+            database=database,
+            user=username,
+            password=password,
+            port=1433,
+            as_dict=True
+        )
         
-        conn = pyodbc.connect(conn_str)
         print(f"成功連接到資料庫: {database}")
         return conn
+        
+    except Exception as e:
+        print(f"資料庫連接錯誤: {str(e)}")
+        print(f"連接詳情: server={server}, user={username}, database={database}")
+        raise
         
     except Exception as e:
         print(f"資料庫連接錯誤: {str(e)}")
