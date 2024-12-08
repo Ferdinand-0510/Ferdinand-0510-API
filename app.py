@@ -11,7 +11,12 @@ from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from database import create_connection
+import logging
+from dotenv import load_dotenv
 
+# 配置日志
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 # 創建 Flask 應用程序實例
