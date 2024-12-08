@@ -1,39 +1,28 @@
 import os
-import pymssql
-from dotenv import load_dotenv
+import pyodbc
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# 配置 logging
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
 def create_connection():
-    """
-    創建與 Azure SQL Database 的連接
-    """
+    server = "carlweb-server.database.windows.net"
+    database = "CarlWeb"
+    username = "carluser"
+    password = os.getenv('DB_PASSWORD')
+
+    conn_str = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={server};"
+        f"DATABASE={database};"
+        f"UID={username};"
+        f"PWD={password}"
+    )
+
     try:
-        server = "carlweb-server.database.windows.net"
-        database = "CarlWeb"
-        username = "carluser"
-        password = os.getenv('DB_PASSWORD', 'Golen3857.')  # 提供默認值
-        
-        logger.info(f"嘗試連接到服務器: {server}, 數據庫: {database}, 用戶: {username}")
-        
-        # 使用 pymssql 連接
-        conn = pymssql.connect(
-            server=server, 
-            user=username,
-            password=password, 
-            database=database,
-            as_dict=True,
-            charset='utf8'
-        )
-        
-        logger.info(f"成功連接到資料庫: {database}")
+        conn = pyodbc.connect(conn_str)
         return conn
-        
     except Exception as e:
-        logger.error(f"資料庫連接錯誤: {str(e)}")
-        logger.error(f"連接詳情: server={server}, user={username}, database={database}")
+        logger.error(f"数据库连接错误: {e}")
         raise

@@ -3,27 +3,14 @@ services:
     name: webtest-api
     env: python
     buildCommand: |
-      # 更新系統並安裝必要的依賴
       apt-get update && \
-      apt-get install -y \
-        unixodbc \
-        unixodbc-dev \
-        freetds-dev \
-        freetds-bin \
-        tdsodbc \
-        wget \
-        gnupg \
-        && \
-      # 添加 Microsoft 倉庫
+      apt-get install -y unixodbc-dev && \
+      apt-get install -y curl gnupg && \
       curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-      curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+      curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
       apt-get update && \
-      ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
-      # 安裝 Python 依賴
+      ACCEPT_EULA=Y apt-get install -y msodbcsql17 mssql-tools && \
+      echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile && \
+      echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc && \
       pip install -r requirements.txt
     startCommand: gunicorn app:app
-    envVars:
-      - key: PYTHONPATH
-        value: /opt/render/project/src
-      - key: DB_PASSWORD
-        sync: false
